@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Toko Kalender | Kalender 2027</title>
+<!--
+  PETUNJUK SINGKAT:
+  1. Isi konfigurasi Firebase di bagian FIREBASE_CONFIG di bawah (dari Firebase Console > Project settings).
+  2. Jika belum diisi, website memakai data contoh (SAMPLE_PRODUCTS) dan pesanan tidak tersimpan online.
+  3. Ganti nomor WhatsApp toko lewat halaman admin (admin.html), bukan di file ini.
+  4. Untuk online: upload index.html (dan admin.html) ke Netlify Drop, GitHub Pages, atau Cloudflare Pages.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary: #1e3a5f;
+    --primary-dark: #142842;
+    --accent: #f97316;
+    --accent-dark: #ea580c;
+    --bg: #f7f8fb;
+    --card: #ffffff;
+    --text: #1f2937;
+    --muted: #6b7280;
+    --border: #e5e7eb;
+    --success: #16a34a;
+    --danger: #dc2626;
+    --radius: 14px;
+    --shadow: 0 4px 16px rgba(0,0,0,.07);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { font-family: 'Poppins', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); line-height: 1.5; }
+  img { max-width: 100%; display: block; }
+  button, input, select, textarea { font: inherit; }
+  a { color: inherit; text-decoration: none; }
+  .container { width: min(1200px, 92%); margin: 0 auto; }
+
+  /* Navbar */
+  header { position: sticky; top: 0; z-index: 50; background: var(--primary); color: #fff; box-shadow: var(--shadow); }
+  .nav { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+  .logo { font-weight: 700; font-size: 1.2rem; }
+  .logo span { color: var(--accent); }
+  .menu { display: flex; gap: 22px; list-style: none; }
+  .menu a { opacity: .9; transition: opacity .2s; }
+  .menu a:hover { opacity: 1; color: var(--accent); }
+  .nav-right { display: flex; align-items: center; gap: 12px; }
+  .cart-btn { position: relative; background: none; border: none; color: #fff; cursor: pointer; font-size: 1.4rem; }
+  .badge { position: absolute; top: -6px; right: -8px; background: var(--accent); color: #fff; font-size: .7rem; border-radius: 999px; padding: 1px 6px; min-width: 18px; text-align: center; }
+  .hamburger { display: none; background: none; border: none; color: #fff; font-size: 1.6rem; cursor: pointer; }
+  .mobile-menu { display: none; flex-direction: column; background: var(--primary-dark); padding: 12px 4%; gap: 10px; }
+  .mobile-menu.open { display: flex; }
+  .mobile-menu a { padding: 8px 0; }
+
+  /* Hero */
+  .hero { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: #fff; padding: 64px 0; }
+  .hero-inner { display: grid; grid-template-columns: 1.1fr 1fr; gap: 32px; align-items: center; }
+  .hero h1 { font-size: clamp(1.8rem, 4vw, 2.8rem); line-height: 1.2; margin-bottom: 14px; }
+  .hero h1 span { color: var(--accent); }
+  .hero p { opacity: .9; margin-bottom: 24px; }
+  .btn { display: inline-block; padding: 12px 22px; border-radius: 10px; border: none; cursor: pointer; font-weight: 600; transition: transform .15s, background .2s; }
+  .btn:hover { transform: translateY(-2px); }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent-dark); }
+  .btn-outline { background: transparent; color: #fff; border: 2px solid #fff; margin-left: 8px; }
+  .btn-sm { padding: 8px 14px; font-size: .9rem; }
+  .btn:disabled { background: #9ca3af; cursor: not-allowed; transform: none; }
+  .hero-img { background: rgba(255,255,255,.08); border-radius: var(--radius); padding: 14px; }
+  .hero-img img { border-radius: 10px; width: 100%; height: 280px; object-fit: cover; }
+  .promo-bar { background: var(--accent); color: #fff; text-align: center; padding: 10px; font-weight: 600; font-size: .95rem; }
+  .countdown { font-variant-numeric: tabular-nums; }
+
+  /* Section & katalog */
+  section { padding: 56px 0; }
+  .section-title { font-size: 1.7rem; color: var(--primary); margin-bottom: 8px; }
+  .section-sub { color: var(--muted); margin-bottom: 26px; }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 22px; align-items: center; }
+  .toolbar input, .toolbar select { padding: 10px 14px; border: 1px solid var(--border); border-radius: 10px; background: #fff; }
+  .toolbar input { flex: 1; min-width: 200px; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip { padding: 8px 14px; border-radius: 999px; border: 1px solid var(--border); background: #fff; cursor: pointer; font-size: .9rem; }
+  .chip.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 22px; }
+  .card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; display: flex; flex-direction: column; transition: transform .2s, box-shadow .2s; animation: fadeUp .4s ease both; }
+  .card:hover { transform: translateY(-4px); box-shadow: 0 10px 24px rgba(0,0,0,.1); }
+  .card-img { position: relative; cursor: pointer; }
+  .card-img img { width: 100%; height: 200px; object-fit: cover; }
+  .tag { position: absolute; top: 10px; left: 10px; color: #fff; font-size: .75rem; padding: 4px 10px; border-radius: 999px; font-weight: 600; }
+  .tag.promo { background: var(--accent); }
+  .tag.habis { background: var(--danger); }
+  .card-body { padding: 16px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+  .card-body h3 { font-size: 1rem; }
+  .cat { font-size: .8rem; color: var(--muted); text-transform: capitalize; }
+  .rating { color: #f59e0b; font-size: .9rem; }
+  .price { margin-top: auto; }
+  .price .old { text-decoration: line-through; color: var(--muted); font-size: .85rem; margin-right: 6px; }
+  .price .now { color: var(--primary); font-weight: 700; font-size: 1.1rem; }
+  .card-body .btn { margin-top: 8px; }
+  .empty { grid-column: 1 / -1; text-align: center; color: var(--muted); padding: 40px 0; }
+
+  /* Testimoni */
+  .testi { background: #fff; }
+  .testi-box { position: relative; min-height: 150px; }
+  .testi-item { display: none; background: var(--bg); padding: 26px; border-radius: var(--radius); max-width: 620px; margin: 0 auto; text-align: center; }
+  .testi-item.show { display: block; animation: fadeUp .5s ease; }
+  .testi-item p { font-style: italic; margin-bottom: 10px; }
+  .testi-nav { display: flex; justify-content: center; gap: 8px; margin-top: 18px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; border: none; background: var(--border); cursor: pointer; }
+  .dot.active { background: var(--accent); }
+
+  /* Modal */
+  .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: none; align-items: center; justify-content: center; z-index: 100; padding: 16px; }
+  .modal-bg.open { display: flex; }
+  .modal { background: #fff; border-radius: var(--radius); max-width: 780px; width: 100%; max-height: 90vh; overflow-y: auto; position: relative; animation: fadeUp .3s ease; }
+  .modal-close { position: absolute; top: 10px; right: 14px; background: none; border: none; font-size: 1.8rem; cursor: pointer; color: var(--muted); z-index: 2; }
+  .detail { display: grid; grid-template-columns: 1fr 1fr; }
+  .detail img { width: 100%; height: 100%; object-fit: cover; min-height: 260px; }
+  .detail-body { padding: 24px; display: flex; flex-direction: column; gap: 10px; }
+  .detail-body h2 { color: var(--primary); font-size: 1.3rem; }
+  .detail-body ul { margin-left: 18px; color: var(--muted); font-size: .92rem; }
+  .qty { display: flex; align-items: center; gap: 10px; }
+  .qty button { width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--border); background: #fff; cursor: pointer; font-size: 1.1rem; }
+  .qty input { width: 60px; text-align: center; padding: 6px; border: 1px solid var(--border); border-radius: 8px; }
+  .discount-note { font-size: .85rem; color: var(--success); }
+
+  /* Keranjang & checkout */
+  .two-col { display: grid; grid-template-columns: 1.4fr 1fr; gap: 26px; align-items: start; }
+  .panel { background: #fff; border-radius: var(--radius); box-shadow: var(--shadow); padding: 22px; }
+  .cart-item { display: grid; grid-template-columns: 70px 1fr auto; gap: 14px; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--border); }
+  .cart-item img { width: 70px; height: 70px; object-fit: cover; border-radius: 8px; }
+  .cart-item .name { font-weight: 600; }
+  .cart-item .unit { color: var(--muted); font-size: .85rem; }
+  .remove { background: none; border: none; color: var(--danger); cursor: pointer; font-size: .85rem; margin-top: 4px; }
+  .summary-row { display: flex; justify-content: space-between; padding: 6px 0; }
+  .summary-row.total { font-weight: 700; font-size: 1.1rem; border-top: 1px solid var(--border); margin-top: 8px; padding-top: 12px; color: var(--primary); }
+  .form-group { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+  .form-group label { font-size: .88rem; font-weight: 500; }
+  .form-group input, .form-group select, .form-group textarea { padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; }
+  .form-group textarea { min-height: 80px; resize: vertical; }
+  .form-group .err { color: var(--danger); font-size: .8rem; display: none; }
+  .form-group.invalid input, .form-group.invalid select, .form-group.invalid textarea { border-color: var(--danger); }
+  .form-group.invalid .err { display: block; }
+  .radio-list { display: flex; flex-direction: column; gap: 8px; }
+  .radio-list label { display: flex; gap: 8px; align-items: center; padding: 10px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; font-weight: 400; }
+  .empty-cart { text-align: center; color: var(--muted); padding: 30px 0; }
+
+  /* Kontak & footer */
+  .contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; }
+  .contact-info p { margin-bottom: 10px; }
+  footer { background: var(--primary-dark); color: #cbd5e1; padding: 36px 0 20px; }
+  footer .foot-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 26px; }
+  footer h4 { color: #fff; margin-bottom: 10px; }
+  footer a:hover { color: var(--accent); }
+  footer .copy { text-align: center; margin-top: 26px; font-size: .85rem; opacity: .7; }
+
+  /* WA floating & toast */
+  .wa-float { position: fixed; right: 18px; bottom: 18px; background: #25d366; color: #fff; width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; box-shadow: var(--shadow); z-index: 60; animation: pulse 2s infinite; }
+  .toast-wrap { position: fixed; bottom: 90px; right: 18px; display: flex; flex-direction: column; gap: 8px; z-index: 200; }
+  .toast { background: var(--primary); color: #fff; padding: 12px 18px; border-radius: 10px; box-shadow: var(--shadow); animation: fadeUp .3s ease; max-width: 300px; }
+  .toast.ok { background: var(--success); }
+  .toast.err { background: var(--danger); }
+
+  .loading { text-align: center; color: var(--muted); padding: 30px; grid-column: 1/-1; }
+
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(37,211,102,.6); } 70% { box-shadow: 0 0 0 14px rgba(37,211,102,0); } 100% { box-shadow: 0 0 0 0 rgba(37,211,102,0); } }
+
+  /* Responsif */
+  @media (max-width: 860px) {
+    .menu { display: none; }
+    .hamburger { display: block; }
+    .hero-inner, .two-col, .contact-grid, .detail { grid-template-columns: 1fr; }
+    .hero-img img { height: 200px; }
+    footer .foot-grid { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 480px) {
+    .btn-outline { margin: 8px 0 0 0; display: block; text-align: center; }
+    .cart-item { grid-template-columns: 56px 1fr; }
+    .cart-item > div:last-child { grid-column: 1 / -1; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+
+<script type="module">
+/* ==========================================================
+   KONFIGURASI — UBAH DI SINI
+   ========================================================== */
+
+// 1. Isi dengan konfigurasi dari Firebase Console (Project settings > Your apps > Web).
+//    Jika masih kosong, website berjalan dengan data contoh secara lokal.
+const FIREBASE_CONFIG = {
+  apiKey: "ISI_API_KEY",
+  authDomain: "ISI_PROJECT.firebaseapp.com",
+  projectId: "ISI_PROJECT_ID",
+  storageBucket: "ISI_PROJECT.appspot.com",
+  messagingSenderId: "ISI_SENDER_ID",
+  appId: "ISI_APP_ID"
+};
+
+// 2. Info toko awal (dipakai jika belum ada data di database; bisa diubah lewat admin).
+const DEFAULT_STORE = {
+  nama: "Toko Kalender Nusantara",
+  alamat: "Jl. Contoh No. 123, Jakarta Selatan",
+  jam: "Senin - Sabtu, 09.00 - 17.00 WIB",
+  whatsapp: "6281234567890",
+  email: "info@tokokalender.id",
+  instagram: "https://instagram.com/",
+  facebook: "https://facebook.com/",
+  promoText: "Diskon 20% untuk pemesanan minimal 10 kalender!",
+  promoEnd: "2026-12-31T23:59:00+07:00",
+  ongkirEstimasi: 15000
+};
+
+// 3. Data contoh (dipakai jika Firebase belum dikonfigurasi).
+const SAMPLE_PRODUCTS = [
+  { id: "p1", nama: "Kalender Dinding Minimalis 2027", kategori: "dinding", harga: 45000, hargaDiskon: 0, rating: 4.8, stok: 50, deskripsi: "Desain minimalis dengan kertas art paper 260gsm.", gambar: "https://placehold.co/600x400/1e3a5f/ffffff?text=Dinding+2027", ukuran: "A3 (30x42 cm)", bahan: "Art paper 260gsm", tahun: ["2027","2028"], status: "aktif", terlaris: 12, dibuat: 1 },
+  { id: "p2", nama: "Kalender Meja Mini 2027", kategori: "meja", harga: 25000, hargaDiskon: 19000, rating: 4.6, stok: 80, deskripsi: "Kalender meja kecil yang cocok untuk kantor.", gambar: "https://placehold.co/600x400/f97316/ffffff?text=Meja+Mini", ukuran: "15x20 cm", bahan: "Karton ivory 300gsm", tahun: ["2027"], status: "aktif", terlaris: 30, dibuat: 2 },
+  { id: "p3", nama: "Kalender Duduk Kerja 2027", kategori: "duduk", harga: 60000, hargaDiskon: 0, rating: 4.7, stok: 25, deskripsi: "Kalender duduk dengan kolom catatan harian.", gambar: "https://placehold.co/600x400/0f766e/ffffff?text=Duduk+Kerja", ukuran: "13x18 cm", bahan: "Art carton 260gsm", tahun: ["2027","2028"], status: "aktif", terlaris: 18, dibuat: 3 },
+  { id: "p4", nama: "Kalender Foto Custom", kategori: "custom", harga: 95000, hargaDiskon: 79000, rating: 4.9, stok: 100, deskripsi: "Cetak foto keluarga Anda, pilih 12 foto favorit.", gambar: "https://placehold.co/600x400/7c3aed/ffffff?text=Custom+Foto", ukuran: "A4 (21x30 cm)", bahan: "Photo paper glossy", tahun: ["2027"], status: "aktif", terlaris: 25, dibuat: 4 },
+  { id: "p5", nama: "Kalender Dinding Botani", kategori: "dinding", harga: 55000, hargaDiskon: 0, rating: 4.5, stok: 0, deskripsi: "Ilustrasi tanaman tropis yang menyegarkan ruangan.", gambar: "https://placehold.co/600x400/16a34a/ffffff?text=Botani", ukuran: "A3 (30x42 cm)", bahan: "Art paper 260gsm", tahun: ["2027"], status: "aktif", terlaris: 9, dibuat: 5 },
+  { id: "p6", nama: "Kalender Meja Kayu Premium", kategori: "meja", harga: 120000, hargaDiskon: 99000, rating: 4.9, stok: 15, deskripsi: "Dudukan kayu jati dengan kalender lepas per bulan.", gambar: "https://placehold.co/600x400/92400e/ffffff?text=Kayu+Premium", ukuran: "18x22 cm", bahan: "Kayu jati + kertas 300gsm", tahun: ["2027","2028"], status: "aktif", terlaris: 7, dibuat: 6 },
+  { id: "p7", nama: "Kalender Duduk Anak Ceria", kategori: "duduk", harga: 40000, hargaDiskon: 0, rating: 4.4, stok: 60, deskripsi: "Ilustrasi karakter lucu untuk anak-anak.", gambar: "https://placehold.co/600x400/db2777/ffffff?text=Anak+Ceria", ukuran: "13x18 cm", bahan: "Art carton 260gsm", tahun: ["2027"], status: "aktif", terlaris: 14, dibuat: 7 },
+  { id: "p8", nama: "Kalender Dinding Custom Logo", kategori: "custom", harga: 150000, hargaDiskon: 0, rating: 4.7, stok: 40, deskripsi: "Cocok untuk kantor dan bisnis, logo perusahaan di setiap bulan.", gambar: "https://placehold.co/600x400/0369a1/ffffff?text=Logo+Bisnis", ukuran: "A3 (30x42 cm)", bahan: "Art paper 260gsm", tahun: ["2027","2028"], status: "aktif", terlaris: 5, dibuat: 8 }
+];
+
+const SAMPLE_TESTI = [
+  { nama: "Dewi, Jakarta", teks: "Kalender meja kayunya bagus sekali, kualitas kertasnya tebal dan rapi. Pengiriman juga cepat!" },
+  { nama: "Budi, Bandung", teks: "Pesan kalender custom foto untuk hadiah keluarga. Hasilnya mengharukan dan warnanya sangat jelas." },
+  { nama: "Sinta, Surabaya", teks: "Pelayanan via WhatsApp ramah dan responsif. Harga diskon untuk pesanan banyak juga sangat membantu." }
+];
+
+/* ==========================================================
+   FIREBASE (import dari CDN)
+   ========================================================== */
+const firebaseReady = !FIREBASE_CONFIG.apiKey.startsWith("ISI_");
+let db = null, fs = null;
+if (firebaseReady) {
+  const app = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js");
+  fs = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+  const firebaseApp = app.initializeApp(FIREBASE_CONFIG);
+  db = fs.getFirestore(firebaseApp);
+}
+
+/* ==========================================================
+   STATE
+   ========================================================== */
+let products = [];
+let store = { ...DEFAULT_STORE };
+let testi = [...SAMPLE_TESTI];
+let cart = JSON.parse(localStorage.getItem("cart") || "[]");
+let filter = { kategori: "semua", cari: "", urut: "terbaru", maxHarga: 200000 };
+let testiIndex = 0;
+
+const rupiah = n => "Rp " + Number(n || 0).toLocaleString("id-ID");
+const hargaAkhir = p => (p.hargaDiskon && p.hargaDiskon < p.harga) ? p.hargaDiskon : p.harga;
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+
+function toast(msg, type = "") {
+  const el = document.createElement("div");
+  el.className = "toast " + type;
+  el.textContent = msg;
+  $("#toastWrap").appendChild(el);
+  setTimeout(() => el.remove(), 2800);
+}
+
+function saveCart() { localStorage.setItem("cart", JSON.stringify(cart)); renderBadge(); }
+
+/* ==========================================================
+   DATA: ambil dari Firebase (realtime) atau data contoh
+   ========================================================== */
+function startListeners() {
+  if (!firebaseReady) {
+    products = SAMPLE_PRODUCTS;
+    renderStore();
+    renderProducts();
+    renderTesti();
+    return;
+  }
+  fs.onSnapshot(fs.collection(db, "products"), snap => {
+    products = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderProducts();
+  });
+  fs.onSnapshot(fs.doc(db, "settings", "toko"), snap => {
+    if (snap.exists()) store = { ...DEFAULT_STORE, ...snap.data() };
+    renderStore();
+  });
+  fs.onSnapshot(fs.collection(db, "testimoni"), snap => {
+    if (!snap.empty) testi = snap.docs.map(d => d.data());
+    renderTesti();
+  });
+}
+
+/* ==========================================================
+   RENDER: info toko & promo
+   ========================================================== */
+function renderStore() {
+  document.title = store.nama + " | Kalender";
+  $("#logoText").innerHTML = esc(store.nama).replace(/^(\S+)/, '$1 <span>');
+  $("#logoText").innerHTML += "</span>";
+  $("#promoText").textContent = store.promoText;
+  $("#alamat").textContent = store.alamat;
+  $("#jam").textContent = store.jam;
+  $("#wa").textContent = "+" + store.whatsapp;
+  $("#waFloat").href = `https://wa.me/${store.whatsapp}`;
+  $("#emailToko").textContent = store.email;
+  $("#emailToko").href = "mailto:" + store.email;
+  $("#igLink").href = store.instagram;
+  $("#fbLink").href = store.facebook;
+  $("#footerNama").textContent = store.nama;
+  $("#heroNama").textContent = store.nama;
+  startCountdown();
+}
+
+function startCountdown() {
+  clearInterval(window._cd);
+  const end = new Date(store.promoEnd).getTime();
+  const tick = () => {
+    const diff = end - Date.now();
+    if (isNaN(end) || diff <= 0) { $("#countdown").textContent = "Promo berakhir"; clearInterval(window._cd); return; }
+    const d = Math.floor(diff / 86400000);
+    const h = Math.floor(diff / 3600000) % 24;
+    const m = Math.floor(diff / 60000) % 60;
+    const s = Math.floor(diff / 1000) % 60;
+    $("#countdown").textContent = `${d} hari ${h} jam ${m} menit ${s} detik`;
+  };
+  tick();
+  window._cd = setInterval(tick, 1000);
+}
+
+/* ==========================================================
+   RENDER: katalog (filter, cari, urut)
+   ========================================================== */
+function renderProducts() {
+  let list = products.filter(p => p.status !== "nonaktif");
+  if (filter.kategori !== "semua") list = list.filter(p => p.kategori === filter.kategori);
+  if (filter.cari) {
+    const q = filter.cari.toLowerCase();
+    list = list.filter(p => (p.nama || "").toLowerCase().includes(q));
+  }
+  list = list.filter(p => hargaAkhir(p) <= filter.maxHarga);
+  const sorter = {
+    harga_asc: (a, b) => hargaAkhir(a) - hargaAkhir(b),
+    harga_desc: (a, b) => hargaAkhir(b) - hargaAkhir(a),
+    terlaris: (a, b) => (b.terlaris || 0) - (a.terlaris || 0),
+    terbaru: (a, b) => (b.dibuat || 0) - (a.dibuat || 0)
+  };
+  list.sort(sorter[filter.urut]);
+
+  const grid = $("#grid");
+  if (!list.length) { grid.innerHTML = `<div class="empty">Produk tidak ditemukan. Coba ubah filter atau kata kunci.</div>`; return; }
+
+  grid.innerHTML = list.map((p, i) => {
+    const promo = p.hargaDiskon && p.hargaDiskon < p.harga;
+    const habis = Number(p.stok) <= 0;
+    return `
+    <article class="card" style="animation-delay:${i * 60}ms">
+      <div class="card-img" data-detail="${esc(p.id)}">
+        <img src="${esc(p.gambar)}" alt="${esc(p.nama)}" loading="lazy">
+        ${habis ? `<span class="tag habis">Habis</span>` : promo ? `<span class="tag promo">Promo</span>` : ""}
+      </div>
+      <div class="card-body">
+        <h3>${esc(p.nama)}</h3>
+        <span class="cat">${esc(p.kategori)}</span>
+        <span class="rating">★ ${Number(p.rating || 0).toFixed(1)}</span>
+        <div class="price">
+          ${promo ? `<span class="old">${rupiah(p.harga)}</span>` : ""}
+          <span class="now">${rupiah(hargaAkhir(p))}</span>
+        </div>
+        <button class="btn btn-primary btn-sm" data-add="${esc(p.id)}" ${habis ? "disabled" : ""}>
+          ${habis ? "Stok Habis" : "Tambah ke Keranjang"}
+        </button>
+      </div>
+    </article>`;
+  }).join("");
+}
+
+/* ==========================================================
+   RENDER: testimoni (carousel sederhana)
+   ========================================================== */
+function renderTesti() {
+  $("#testiBox").innerHTML = testi.map((t, i) => `
+    <div class="testi-item ${i === testiIndex ? "show" : ""}">
+      <p>"${esc(t.teks)}"</p>
+      <strong>${esc(t.nama)}</strong>
+    </div>`).join("");
+  $("#testiNav").innerHTML = testi.map((_, i) =>
+    `<button class="dot ${i === testiIndex ? "active" : ""}" data-testi="${i}" aria-label="Testimoni ${i + 1}"></button>`
+  ).join("");
+}
+setInterval(() => {
+  if (!testi.length) return;
+  testiIndex = (testiIndex + 1) % testi.length;
+  renderTesti();
+}, 5000);
+
+/* ==========================================================
+   MODAL DETAIL PRODUK
+   ========================================================== */
+let detailQty = 1;
+function openDetail(id) {
+  const p = products.find(x => x.id === id);
+  if (!p) return;
+  detailQty = 1;
+  const promo = p.hargaDiskon && p.hargaDiskon < p.harga;
+  const habis = Number(p.stok) <= 0;
+  $("#detailContent").innerHTML = `
+    <div class="detail">
+      <img src="${esc(p.gambar)}" alt="${esc(p.nama)}">
+      <div class="detail-body">
+        <h2>${esc(p.nama)}</h2>
+        <span class="rating">★ ${Number(p.rating || 0).toFixed(1)}</span>
+        <p>${esc(p.deskripsi)}</p>
+        <ul>
+          <li>Ukuran: ${esc(p.ukuran)}</li>
+          <li>Bahan: ${esc(p.bahan)}</li>
+          <li>Tahun: ${(p.tahun || []).map(esc).join(", ")}</li>
+          <li>Stok: ${Math.max(0, Number(p.stok) || 0)}</li>
+        </ul>
+        <div class="price">
+          ${promo ? `<span class="old">${rupiah(p.harga)}</span>` : ""}
+          <span class="now">${rupiah(hargaAkhir(p))}</span> / pcs
+        </div>
+        <div class="qty">
+          <button id="qMinus">−</button>
+          <input id="qInput" type="number" min="1" value="1">
+          <button id="qPlus">+</button>
+        </div>
+        <p class="discount-note" id="discNote"></p>
+        <button class="btn btn-primary" id="detailAdd" ${habis ? "disabled" : ""}>
+          ${habis ? "Stok Habis" : "Tambah ke Keranjang"}
+        </button>
+      </div>
+    </div>`;
+  updateDiscountNote(p);
+  $("#detailModal").classList.add("open");
+
+  $("#qMinus").onclick = () => setQty(p, detailQty - 1);
+  $("#qPlus").onclick = () => setQty(p, detailQty + 1);
+  $("#qInput").onchange = e => setQty(p, parseInt(e.target.value) || 1);
+  $("#detailAdd").onclick = () => { addToCart(p.id, detailQty); $("#detailModal").classList.remove("open"); };
+}
+function setQty(p, n) {
+  detailQty = Math.min(Math.max(1, n), Math.max(1, Number(p.stok) || 1));
+  $("#qInput").value = detailQty;
+  updateDiscountNote(p);
+}
+function updateDiscountNote(p) {
+  // Diskon grosir: pesan 10 pcs atau lebih mendapat diskon 20% (hanya jika belum ada diskon produk)
+  const note = $("#discNote");
+  if (!note) return;
+  if (detailQty >= 10 && !(p.hargaDiskon && p.hargaDiskon < p.harga)) {
+    const total = p.harga * 0.8 * detailQty;
+    note.textContent = `Diskon grosir 20% berlaku! Total: ${rupiah(total)}`;
+  } else {
+    note.textContent = detailQty >= 10 ? "" : "Beli 10 pcs atau lebih untuk diskon grosir 20%.";
+  }
+}
+
+/* ==========================================================
+   KERANJANG
+   ========================================================== */
+function addToCart(id, qty = 1) {
+  const p = products.find(x => x.id === id);
+  if (!p || Number(p.stok) <= 0) return toast("Produk tidak tersedia", "err");
+  const item = cart.find(c => c.id === id);
+  const jumlahBaru = (item ? item.qty : 0) + qty;
+  if (jumlahBaru > Number(p.stok)) return toast(`Stok tersisa ${p.stok} pcs`, "err");
+  if (item) item.qty = jumlahBaru;
+  else cart.push({ id, qty });
+  saveCart();
+  renderCart();
+  toast(`${p.nama} ditambahkan ke keranjang ✔`, "ok");
+}
+
+function changeQty(id, delta) {
+  const item = cart.find(c => c.id === id);
+  const p = products.find(x => x.id === id);
+  if (!item || !p) return;
+  const n = item.qty + delta;
+  if (n < 1) return removeFromCart(id);
+  if (n > Number(p.stok)) return toast(`Stok tersisa ${p.stok} pcs`, "err");
+  item.qty = n;
+  saveCart();
+  renderCart();
+}
+function removeFromCart(id) {
+  cart = cart.filter(c => c.id !== id);
+  saveCart();
+  renderCart();
+}
+
+function hitungTotal() {
+  let subtotal = 0, totalQty = 0, diskonGrosir = 0;
+  cart.forEach(c => {
+    const p = products.find(x => x.id === c.id);
+    if (!p) return;
+    const harga = hargaAkhir(p);
+    const sub = harga * c.qty;
+    subtotal += sub;
+    totalQty += c.qty;
+  });
+  // Diskon grosir 20% jika total pcs >= 10 (dihitung dari subtotal)
+  if (totalQty >= 10) diskonGrosir = Math.round(subtotal * 0.2);
+  const ongkir = subtotal > 0 ? Number(store.ongkirEstimasi || 0) : 0;
+  return { subtotal, diskonGrosir, ongkir, total: subtotal - diskonGrosir + ongkir, totalQty };
+}
+
+function renderBadge() {
+  const n = cart.reduce((a, c) => a + c.qty, 0);
+  $("#cartBadge").textContent = n;
+  $("#cartBadge").style.display = n ? "inline-block" : "none";
+}
+
+function renderCart() {
+  renderBadge();
+  const box = $("#cartItems");
+  if (!cart.length) {
+    box.innerHTML = `<div class="empty-cart">Keranjang Anda masih kosong.<br><br><a class="btn btn-primary btn-sm" href="#produk">Mulai Belanja</a></div>`;
+  } else {
+    box.innerHTML = cart.map(c => {
+      const p = products.find(x => x.id === c.id);
+      if (!p) return "";
+      return `
+      <div class="cart-item">
+        <img src="${esc(p.gambar)}" alt="${esc(p.nama)}">
+        <div>
+          <div class="name">${esc(p.nama)}</div>
+          <div class="unit">${rupiah(hargaAkhir(p))} / pcs</div>
+          <button class="remove" data-remove="${esc(c.id)}">Hapus</button>
+        </div>
+        <div class="qty">
+          <button data-minus="${esc(c.id)}">−</button>
+          <span>${c.qty}</span>
+          <button data-plus="${esc(c.id)}">+</button>
+        </div>
+      </div>`;
+    }).join("");
+  }
+  const t = hitungTotal();
+  $("#sumSubtotal").textContent = rupiah(t.subtotal);
+  $("#sumDiskon").textContent = "- " + rupiah(t.diskonGrosir);
+  $("#sumOngkir").textContent = rupiah(t.ongkir);
+  $("#sumTotal").textContent = rupiah(t.total);
+  $("#diskonNote").textContent = t.totalQty >= 10 ? "Diskon grosir 20% sudah diterapkan." : `Tambah ${10 - t.totalQty} pcs lagi untuk diskon grosir 20%.`;
+  $("#btnCheckout").disabled = !cart.length;
+}
+
+/* ==========================================================
+   CHECKOUT
+   ========================================================== */
+const FIELDS = {
+  nama: v => v.trim().length >= 3 || "Nama minimal 3 karakter",
+  email: v => /^\S+@\S+\.\S+$/.test(v) || "Format email tidak valid",
+  wa: v => /^0?8\d{8,11}$/.test(v.replace(/[\s-]/g, "")) || "Nomor WhatsApp tidak valid",
+  alamat: v => v.trim().length >= 10 || "Alamat minimal 10 karakter",
+  kota: v => v.trim().length >= 3 || "Kota wajib diisi",
+  kodepos: v => /^\d{5}$/.test(v) || "Kode pos 5 digit"
+};
+
+function validateForm() {
+  let ok = true;
+  Object.keys(FIELDS).forEach(name => {
+    const el = document.querySelector(`[name="${name}"]`);
+    const group = el.closest(".form-group");
+    const res = FIELDS[name](el.value);
+    if (res !== true) {
+      ok = false;
+      group.classList.add("invalid");
+      group.querySelector(".err").textContent = res;
+    } else {
+      group.classList.remove("invalid");
+    }
+  });
+  const kurir = document.querySelector("[name=kurir]:checked");
+  const bayar = document.querySelector("[name=bayar]:checked");
+  if (!kurir || !bayar) { ok = false; toast("Pilih kurir dan metode pembayaran", "err"); }
+  return ok;
+}
+
+function buildWaMessage(data, t, orderId) {
+  const lines = cart.map(c => {
+    const p = products.find(x => x.id === c.id);
+    return p ? `- ${p.nama} x${c.qty} = ${rupiah(hargaAkhir(p) * c.qty)}` : "";
+  }).filter(Boolean).join("\n");
+  return [
+    `*PESANAN BARU${orderId ? " #" + orderId : ""}*`,
+    "",
+    `Nama: ${data.nama}`,
+    `Email: ${data.email}`,
+    `WhatsApp: ${data.wa}`,
+    `Alamat: ${data.alamat}, ${data.kota} ${data.kodepos}`,
+    `Kurir: ${data.kurir}`,
+    `Pembayaran: ${data.bayar}`,
+    data.catatan ? `Catatan: ${data.catatan}` : "",
+    "",
+    "*Detail Pesanan:*",
+    lines,
+    "",
+    `Subtotal: ${rupiah(t.subtotal)}`,
+    `Diskon grosir: - ${rupiah(t.diskonGrosir)}`,
+    `Ongkir (estimasi): ${rupiah(t.ongkir)}`,
+    `*Total: ${rupiah(t.total)}*`
+  ].filter(l => l !== "").join("\n");
+}
+
+async function submitOrder(e) {
+  e.preventDefault();
+  if (!cart.length) return toast("Keranjang masih kosong", "err");
+  if (!validateForm()) return toast("Periksa kembali data yang belum lengkap", "err");
+
+  const f = e.target;
+  const data = {
+    nama: f.nama.value.trim(),
+    email: f.email.value.trim(),
+    wa: f.wa.value.replace(/[\s-]/g, ""),
+    alamat: f.alamat.value.trim(),
+    kota: f.kota.value.trim(),
+    kodepos: f.kodepos.value.trim(),
+    kurir: document.querySelector("[name=kurir]:checked").value,
+    bayar: document.querySelector("[name=bayar]:checked").value,
+    catatan: f.catatan.value.trim()
+  };
+  const t = hitungTotal();
+  let orderId = "";
+
+  // Simpan pesanan ke database jika Firebase aktif
+  if (firebaseReady) {
+    try {
+      const ref = await fs.addDoc(fs.collection(db, "orders"), {
+        ...data,
+        items: cart.map(c => {
+          const p = products.find(x => x.id === c.id);
+          return { id: c.id, nama: p?.nama, qty: c.qty, harga: p ? hargaAkhir(p) : 0 };
+        }),
+        ...t,
+        status: "baru",
+        dibuat: fs.serverTimestamp()
+      });
+      orderId = ref.id.slice(0, 6).toUpperCase();
+    } catch (err) {
+      console.error(err);
+      toast("Gagal menyimpan pesanan. Silakan coba lagi.", "err");
+      return;
+    }
+  }
+
+  const msg = buildWaMessage(data, t, orderId);
+  window.open(`https://wa.me/${store.whatsapp}?text=${encodeURIComponent(msg)}`, "_blank");
+  cart = [];
+  saveCart();
+  renderCart();
+  f.reset();
+  toast("Pesanan dikirim! Lanjutkan konfirmasi di WhatsApp.", "ok");
+}
+
+/* ==========================================================
+   EVENT LISTENERS
+   ========================================================== */
+// Navbar mobile
+$("#hamburger").onclick = () => $("#mobileMenu").classList.toggle("open");
+document.querySelectorAll(".mobile-menu a").forEach(a => a.onclick = () => $("#mobileMenu").classList.remove("open"));
+
+// Filter & pencarian
+document.querySelectorAll(".chip").forEach(ch => ch.onclick = () => {
+  document.querySelectorAll(".chip").forEach(c => c.classList.remove("active"));
+  ch.classList.add("active");
+  filter.kategori = ch.dataset.kat;
+  renderProducts();
+});
+$("#search").oninput = e => { filter.cari = e.target.value; renderProducts(); };
+$("#urut").onchange = e => { filter.urut = e.target.value; renderProducts(); };
+$("#maxHarga").oninput = e => {
+  filter.maxHarga = Number(e.target.value);
+  $("#maxHargaLabel").textContent = rupiah(filter.maxHarga);
+  renderProducts();
+};
+
+// Klik kartu produk (detail & tambah)
+$("#grid").onclick = e => {
+  const add = e.target.closest("[data-add]");
+  const det = e.target.closest("[data-detail]");
+  if (add) addToCart(add.dataset.add, 1);
+  else if (det) openDetail(det.dataset.detail);
+};
+
+// Modal detail
+$("#closeDetail").onclick = () => $("#detailModal").classList.remove("open");
+$("#detailModal").onclick = e => { if (e.target.id === "detailModal") e.target.classList.remove("open"); };
+
+// Keranjang
+$("#cartItems").onclick = e => {
+  const t = e.target;
+  if (t.dataset.plus) changeQty(t.dataset.plus, 1);
+  if (t.dataset.minus) changeQty(t.dataset.minus, -1);
+  if (t.dataset.remove) removeFromCart(t.dataset.remove);
+};
+$("#cartBtn").onclick = () => document.getElementById("keranjang").scrollIntoView();
+
+// Checkout
+$("#checkoutForm").onsubmit = submitOrder;
+$("#btnCheckout").onclick = () => document.getElementById("checkout").scrollIntoView();
+Object.keys(FIELDS).forEach(name => {
+  const el = document.querySelector(`[name="${name}"]`);
+  el?.addEventListener("blur", () => validateForm());
+});
+
+// Testimoni
+$("#testiNav").onclick = e => {
+  const d = e.target.closest("[data-testi]");
+  if (!d) return;
+  testiIndex = Number(d.dataset.testi);
+  renderTesti();
+};
+
+// Form kontak
+$("#contactForm").onsubmit = async e => {
+  e.preventDefault();
+  const f = e.target;
+  if (firebaseReady) {
+    try {
+      await fs.addDoc(fs.collection(db, "pesan"), {
+        nama: f.nama.value.trim(), email: f.email.value.trim(), pesan: f.pesan.value.trim(), dibuat: fs.serverTimestamp()
+      });
+    } catch (err) { console.error(err); return toast("Gagal mengirim pesan", "err"); }
+  }
+  f.reset();
+  toast("Terima kasih! Pesan Anda sudah kami terima.", "ok");
+};
+
+/* ==========================================================
+   INISIALISASI
+   ========================================================== */
+renderBadge();
+renderCart();
+renderStore();
+renderTesti();
+startListeners();
+</script>
+
+<!-- ===================== HEADER ===================== -->
+<div class="promo-bar" id="promoBar"><span id="promoText"></span> &nbsp;|&nbsp; Berakhir dalam: <span class="countdown" id="countdown"></span></div>
+
+<header>
+  <div class="container nav">
+    <a href="#beranda" class="logo" id="logoText">Toko <span>Kalender</span></a>
+    <ul class="menu">
+      <li><a href="#beranda">Beranda</a></li>
+      <li><a href="#produk">Produk</a></li>
+      <li><a href="#keranjang">Keranjang</a></li>
+      <li><a href="#kontak">Kontak</a></li>
+    </ul>
+    <div class="nav-right">
+      <button class="cart-btn" id="cartBtn" aria-label="Keranjang">🛒<span class="badge" id="cartBadge">0</span></button>
+      <button class="hamburger" id="hamburger" aria-label="Menu">☰</button>
+    </div>
+  </div>
+  <nav class="mobile-menu" id="mobileMenu">
+    <a href="#beranda">Beranda</a>
+    <a href="#produk">Produk</a>
+    <a href="#keranjang">Keranjang</a>
+    <a href="#kontak">Kontak</a>
+  </nav>
+</header>
+
+<!-- ===================== HERO ===================== -->
+<section class="hero" id="beranda" style="padding:0">
+  <div class="container hero-inner" style="padding:64px 0">
+    <div>
+      <h1 id="heroNama">Kalender <span>2027</span> Sudah Tersedia – Pesan Sekarang!</h1>
+      <p>Pilihan kalender dinding, meja, duduk, dan custom foto dengan kualitas cetak terbaik. Harga bersaing untuk perorangan maupun perusahaan.</p>
+      <a href="#produk" class="btn btn-primary">Belanja Sekarang</a>
+      <a href="#produk" class="btn btn-outline" onclick="document.querySelector('.chip[data-kat=semua]').click()">Lihat Promo</a>
+    </div>
+    <div class="hero-img">
+      <img src="https://placehold.co/800x560/f97316/ffffff?text=Kalender+2027" alt="Kalender 2027">
+    </div>
+  </div>
+</section>
+
+<!-- ===================== PRODUK ===================== -->
+<section id="produk">
+  <div class="container">
+    <h2 class="section-title">Katalog Produk</h2>
+    <p class="section-sub">Temukan kalender yang sesuai dengan gaya dan kebutuhan Anda.</p>
+
+    <div class="toolbar">
+      <input type="search" id="search" placeholder="Cari produk...">
+      <select id="urut">
+        <option value="terbaru">Terbaru</option>
+        <option value="terlaris">Terlaris</option>
+        <option value="harga_asc">Harga terendah</option>
+        <option value="harga_desc">Harga tertinggi</option>
+      </select>
+    </div>
+
+    <div class="toolbar">
+      <div class="chips">
+        <button class="chip active" data-kat="semua">Semua</button>
+        <button class="chip" data-kat="dinding">Dinding</button>
+        <button class="chip" data-kat="meja">Meja</button>
+        <button class="chip" data-kat="duduk">Duduk</button>
+        <button class="chip" data-kat="custom">Custom</button>
+      </div>
+      <label style="display:flex;gap:10px;align-items:center;font-size:.9rem">
+        Maks harga: <input type="range" id="maxHarga" min="10000" max="200000" step="5000" value="200000">
+        <strong id="maxHargaLabel">Rp 200.000</strong>
+      </label>
+    </div>
+
+    <div class="grid" id="grid">
+      <div class="loading">Memuat produk...</div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== TESTIMONI ===================== -->
+<section class="testi">
+  <div class="container">
+    <h2 class="section-title" style="text-align:center">Kata Pelanggan</h2>
+    <p class="section-sub" style="text-align:center">Ulasan dari pelanggan kami.</p>
+    <div class="testi-box" id="testiBox"></div>
+    <div class="testi-nav" id="testiNav"></div>
+  </div>
+</section>
+
+<!-- ===================== KERANJANG ===================== -->
+<section id="keranjang">
+  <div class="container two-col">
+    <div class="panel">
+      <h2 class="section-title" style="font-size:1.4rem">Keranjang Belanja</h2>
+      <div id="cartItems"></div>
+    </div>
+    <div class="panel">
+      <h2 class="section-title" style="font-size:1.4rem">Ringkasan</h2>
+      <div class="summary-row"><span>Subtotal</span><span id="sumSubtotal">Rp 0</span></div>
+      <div class="summary-row"><span>Diskon grosir</span><span id="sumDiskon">- Rp 0</span></div>
+      <div class="summary-row"><span>Ongkir (estimasi)</span><span id="sumOngkir">Rp 0</span></div>
+      <div class="summary-row total"><span>Total</span><span id="sumTotal">Rp 0</span></div>
+      <p class="section-sub" id="diskonNote" style="font-size:.85rem;margin:10px 0 16px"></p>
+      <button class="btn btn-primary" id="btnCheckout" style="width:100%" disabled>Lanjut ke Checkout</button>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== CHECKOUT ===================== -->
+<section id="checkout">
+  <div class="container two-col">
+    <form class="panel" id="checkoutForm" novalidate>
+      <h2 class="section-title" style="font-size:1.4rem">Data Pengiriman</h2>
+      <div class="form-group"><label>Nama lengkap</label><input name="nama" required><span class="err"></span></div>
+      <div class="form-group"><label>Email</label><input name="email" type="email" required><span class="err"></span></div>
+      <div class="form-group"><label>Nomor WhatsApp</label><input name="wa" placeholder="08xxxxxxxxxx" required><span class="err"></span></div>
+      <div class="form-group"><label>Alamat lengkap</label><textarea name="alamat" required></textarea><span class="err"></span></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group"><label>Kota</label><input name="kota" required><span class="err"></span></div>
+        <div class="form-group"><label>Kode pos</label><input name="kodepos" inputmode="numeric" maxlength="5" required><span class="err"></span></div>
+      </div>
+      <div class="form-group"><label>Catatan (opsional)</label><textarea name="catatan" placeholder="Contoh: kirim sore hari"></textarea></div>
+
+      <h3 style="margin:14px 0 8px;font-size:1rem">Kurir</h3>
+      <div class="radio-list">
+        <label><input type="radio" name="kurir" value="JNE Reguler"> JNE Reguler</label>
+        <label><input type="radio" name="kurir" value="J&T Express"> J&amp;T Express</label>
+        <label><input type="radio" name="kurir" value="SiCepat"> SiCepat</label>
+      </div>
+
+      <h3 style="margin:14px 0 8px;font-size:1rem">Metode pembayaran</h3>
+      <div class="radio-list">
+        <label><input type="radio" name="bayar" value="Transfer Bank"> Transfer bank</label>
+        <label><input type="radio" name="bayar" value="E-Wallet"> E-wallet (DANA, OVO, GoPay)</label>
+        <label><input type="radio" name="bayar" value="COD"> COD (bayar di tempat)</label>
+      </div>
+
+      <button class="btn btn-primary" type="submit" style="width:100%;margin-top:18px">Pesan via WhatsApp</button>
+    </form>
+
+    <div class="panel">
+      <h2 class="section-title" style="font-size:1.4rem">Cara Pemesanan</h2>
+      <ol style="margin-left:18px;color:var(--muted);display:flex;flex-direction:column;gap:8px">
+        <li>Isi data pengiriman dengan lengkap.</li>
+        <li>Pilih kurir dan metode pembayaran.</li>
+        <li>Klik "Pesan via WhatsApp", pesan akan otomatis terisi.</li>
+        <li>Kirim pesan dan tim kami akan mengonfirmasi pesanan Anda.</li>
+      </ol>
+      <p class="section-sub" style="margin-top:14px;font-size:.85rem">Pesanan juga tersimpan di sistem kami sehingga dapat dipantau oleh admin.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== KONTAK ===================== -->
+<section id="kontak">
+  <div class="container contact-grid">
+    <div class="contact-info">
+      <h2 class="section-title">Hubungi Kami</h2>
+      <p class="section-sub">Kami siap membantu Anda.</p>
+      <p><strong>Alamat:</strong><br><span id="alamat"></span></p>
+      <p><strong>Jam operasional:</strong><br><span id="jam"></span></p>
+      <p><strong>WhatsApp:</strong> <span id="wa"></span></p>
+      <p><strong>Email:</strong> <a id="emailToko" href="#"></a></p>
+    </div>
+    <form class="panel" id="contactForm">
+      <h3 style="margin-bottom:12px">Kirim Pesan</h3>
+      <div class="form-group"><label>Nama</label><input name="nama" required></div>
+      <div class="form-group"><label>Email</label><input name="email" type="email" required></div>
+      <div class="form-group"><label>Pesan</label><textarea name="pesan" required></textarea></div>
+      <button class="btn btn-primary" type="submit">Kirim</button>
+    </form>
+  </div>
+</section>
+
+<!-- ===================== FOOTER ===================== -->
+<footer>
+  <div class="container foot-grid">
+    <div>
+      <h4 id="footerNama">Toko Kalender</h4>
+      <p>Kalender berkualitas untuk rumah, kantor, dan hadiah spesial.</p>
+    </div>
+    <div>
+      <h4>Ikuti Kami</h4>
+      <p><a id="igLink" href="#" target="_blank">Instagram</a></p>
+      <p><a id="fbLink" href="#" target="_blank">Facebook</a></p>
+    </div>
+    <div>
+      <h4>Menu</h4>
+      <p><a href="#produk">Produk</a></p>
+      <p><a href="#keranjang">Keranjang</a></p>
+      <p><a href="#kontak">Kontak</a></p>
+    </div>
+  </div>
+  <div class="copy">© 2026 Toko Kalender. Semua hak dilindungi.</div>
+</footer>
+
+<!-- ===================== MODAL, WA & TOAST ===================== -->
+<div class="modal-bg" id="detailModal">
+  <div class="modal">
+    <button class="modal-close" id="closeDetail" aria-label="Tutup">×</button>
+    <div id="detailContent"></div>
+  </div>
+</div>
+
+<a class="wa-float" id="waFloat" href="#" target="_blank" aria-label="Chat WhatsApp">💬</a>
+<div class="toast-wrap" id="toastWrap"></div>
+
+</body>
+</html>
